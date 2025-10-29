@@ -103,17 +103,33 @@ def task4():
     table_survived = survived_data.pivot_table(columns=['Sex'], index=['Pclass'], values=['PassengerId'], aggfunc='count')
     table_all = data.pivot_table(columns=['Sex'], index=['Pclass'], values=['PassengerId'], aggfunc='count')
     percentage = (table_survived / table_all) * 100
-    pandasgui.show(percentage)
-    # x = np.linspace(0, 1, 6)
-    # fig, ax = plt.subplots(figsize=(8, 6))
-    # # values = (table_survived.values / table_all.values).flatten()
-    # x = np.arange(len(percentage.values.flatten()))
-    # width = 0.3
+    # pandasgui.show(percentage)
+    
 
-    # ax.bar(x-width/2, percentage.loc[:,(slice(None), 'male')], width, label='Man')
-    # ax.bar(x+width/2, percentage.loc[:,(slice(None), 'female')], width, label='Woman')
+    fig, ax = plt.subplots(figsize=(10, 6))
+    x = np.arange(len(percentage.index))
+    width = 0.3
 
-    # plt.show()
+    male_data = percentage['PassengerId','male'].values
+    female_data = percentage['PassengerId','female'].values
+
+    bars1 = ax.bar(x-width/2, male_data, width, label='Man')
+    bars2 = ax.bar(x+width/2, female_data, width, label='Woman')
+
+    # Add value labels on top of bars
+    ax.bar_label(bars1, labels=[f'{val:.1f}%' for val in male_data], fontsize=9)
+    ax.bar_label(bars2, labels=[f'{val:.1f}%' for val in female_data], fontsize=9)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([f'Class {pclass}' for pclass in percentage.index])
+
+    ax.set_xlabel('Passenger Class')
+    ax.set_ylabel('Survival Rate (%)')
+    ax.set_title('Titanic Survival Rate by Class and Gender')
+    ax.legend()
+
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == '__main__':
     task4()
