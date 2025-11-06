@@ -141,6 +141,101 @@ class Projekt1:
 
         plt.show()
 
+    def zmiana_roznorodnosci_imion_wykres(self):
+        '''8. Określ zmiany różnorodności imion w czasie'''
+        fig, ax = plt.subplots(figsize=(12, 6))
+
+        # Pobierz zestawy 1000 najpopularniejszych imion dla obu płci
+        top_male = set(self.male_1000_names_descending['name'])
+        top_female = set(self.female_1000_names_descending['name'])
+
+        # Filtruj oryginalny DataFrame, aby sprawdzić, czy imię należy do top 1000     
+        df_m = self.df[self.df['gender'] == 'M']
+        df_f = self.df[self.df['gender'] == 'F']
+        cov_m = df_m[df_m['name'].isin(top_male)].groupby('year').count() # liczba imion z top 1000 które się pokrywają z imionami w danym roku
+        cov_f = df_f[df_f['name'].isin(top_female)].groupby('year').count()
+
+        max_dif = np.argmax(np.abs(cov_m['name'] - cov_f['name']))
+        max_dif_year = cov_m.index[max_dif]
+
+        ax.plot(self.df['year'].unique(), cov_m['name']/10, label='Męskie', color='blue')
+        ax.plot(self.df['year'].unique(), cov_f['name']/10, label='Żeńskie', color='pink')
+        ax.annotate(f'Max różnica: {max_dif_year} rok', xy=(max_dif_year, cov_m.loc[max_dif_year]['name']/10), xytext=(max_dif_year, cov_m.loc[max_dif_year]['name']/10+5), arrowprops=dict(arrowstyle='->'))
+        ax.set_title('Zmiany różnorodności imion w czasie na przestrzeni lat 1880-2024')
+        ax.set_xlabel('Rok')
+        ax.set_ylabel('Procent nadawanych imion z top 1000')
+        ax.legend()
+        plt.show()
+        print(f'Maksymalna różnica między płciami w procentach nadawanych imion z top 1000 wynosi: {max_dif}% w roku {max_dif_year}')
+        print(f'Na początku badanego okresu występowała znacznie większa różnorodność nadawanych imion męskich jednak wraz z biegiem lat różnorodność imion męskich i żeńskich wzrastała liniowo i osiągnęła najwyższe zbliżone wartości w ostatnich latach badania')
+
+    def hipoteza(self):
+        '''9. Zweryfikuj hipotezę czy prawdą jest, że w obserwowanym okresie rozkład ostatnich liter imion męskich uległ istotnej zmianie'''
+        
+        self.df['last_letter'] = self.df['name'].str[-1]
+        # agregacja: suma urodzeń (count) dla każdej kombinacji year, gender, last_letter
+        df_agg = (
+            self.df
+            .groupby(['year', 'gender', 'last_letter'])['count']
+            .sum()
+            .reset_index(name='births')
+        )
+        # wyodrębnij dane dla lat 1900, 1975, 2024 dla mężczyzn
+        male = df_agg[df_agg['gender'] == 'M'] 
+
+        # Stwórz tabelę przestawną
+        pivot = male.pivot(index='last_letter', columns='year', values='births')
+
+        # Znormalizuj dane względem całkowitej liczby urodzin w danym roku
+        pivot = pivot.div(pivot.sum(axis=0), axis=1) * 100
+
+        years = [1900, 1975, 2024]
+        letters = pivot.index.tolist()
+        x = np.arange(len(letters))  
+        width = 0.25
+
+        fig, ax = plt.subplots(figsize=(14, 7))
+        for i, year in enumerate(years):
+            vals = pivot.get(year).values
+            ax.bar(x + (i - 1) * width, vals, width=width, label=str(year))
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(letters, rotation=0)
+        ax.set_xlabel('Ostatnia litera imienia')
+        ax.set_ylabel('Procent liczby urodzin w danym roku [%]')
+        ax.set_title('Popularność ostatnich liter imion męskich (1900, 1975, 2024)')
+        ax.legend(title='Rok')
+        ax.grid(axis='y', alpha=0.3)
+        plt.tight_layout()
+        plt.show()
+
+        #  Wyświetl, dla której litery wystąpił największy wzrost/spadek między rokiem 1900 a 2024
+        changes = pivot[2024] - pivot[1900]
+        max_increase_letter = changes.idxmax()
+        max_decrease_letter = changes.idxmin()
+        print('Rozwiązanie zadania 9:')
+        print(f'Największy wzrost między latami 1900 a 2024 wystąpił dla litery: {max_increase_letter} ({changes[max_increase_letter]:.2f}%)')
+        print(f'Największy spadek między latami 1900 a 2024 wystąpił dla litery: {max_decrease_letter} ({changes[max_decrease_letter]:.2f}%)')
+
+        # Dla 3 liter dla których zaobserwowano największą zmianę wyświetl przebieg trendu popularności w całym okresie czasu (dla każdego roku)
+        top_3_letters = changes.abs().sort_values(ascending=False).head(3).index.tolist()
+        
+        
+
+        fig, ax = plt.subplots(figsize=(14, 7))
+        for letter in top_3_letters:
+            letter_data = pivot[pivot.index == letter]
+            ax.plot(letter_data.columns, letter_data.values.flatten(), label=letter)
+
+        plt.title('Trendy popularności ostatnich liter imion męskich')
+        plt.xlabel('Ostatnia litera imienia')
+        plt.ylabel('Procent liczby urodzin w danym roku [%]')
+        plt.legend(title='Rok')
+        plt.grid(axis='y', alpha=0.3)
+        plt.tight_layout()
+        plt.show()
+
+
 if __name__ == "__main__":
         projekt1 = Projekt1()
         projekt1.wczytaj_dane_SSA()
@@ -149,6 +244,8 @@ if __name__ == "__main__":
         unique_male_names_count, unique_female_names_count = projekt1.liczba_unikalnych_imion_gender()
         print(f"Rozwiązanie zadania 3. Liczba unikalnych imion męskich: {unique_male_names_count}, żeńskich: {unique_female_names_count}")
         projekt1.frekwencja_imion()
-        projekt1.liczba_urodzin_wykres()
+        #projekt1.liczba_urodzin_wykres()
         projekt1.najpopularniejsze_imiona()
-        projekt1.najpopularniejsze_imiona_wykres()
+        #projekt1.najpopularniejsze_imiona_wykres()
+        projekt1.zmiana_roznorodnosci_imion_wykres()
+        #projekt1.hipoteza()
