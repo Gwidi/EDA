@@ -3,12 +3,14 @@ import pandas as pd
 import pandasgui
 import numpy as np
 import matplotlib.pyplot as plt
+import sqlite3
 
 class Projekt1:
     def __init__(self):
         self.df = pd.DataFrame()
         self.male_1000_names_descending = pd.DataFrame()
         self.female_1000_names_descending = pd.DataFrame()
+        self.df_pl = pd.DataFrame()
 
     def wczytaj_dane_SSA(self):
         '''1.Wczytaj dane ze wszystkich plików do pojedynczej tablicy'''
@@ -235,6 +237,192 @@ class Projekt1:
         plt.tight_layout()
         plt.show()
 
+    def konotacje_imion(self):
+        '''10. Przeprowadź analizę konotacji imion nadawanych chłopcom i dziewczynkom'''
+
+        # Znajdź imiona unisex w top 1000
+        top_male_names = set(self.male_1000_names_descending['name'])
+        top_female_names = set(self.female_1000_names_descending['name'])
+        unisex_names = top_male_names.intersection(top_female_names)
+
+        # Dane do 1920 roku dla imion unisex
+        df_unisex_1920 = self.df[
+            (self.df['year'] <= 1920) &
+            (self.df['name'].isin(unisex_names))
+        ]
+        
+        # Zsumuj count dla każdego imienia i płci
+        cross_1920 = pd.crosstab(
+            index=df_unisex_1920['name'],
+            columns=df_unisex_1920['gender'],
+            values=df_unisex_1920['count'],
+            aggfunc='sum'
+        ).fillna(0)
+
+        # Oblicz całkowitą liczbę urodzin i wskaźniki konotacji
+        cross_1920['total'] = cross_1920['M'] + cross_1920['F']
+        cross_1920['w_m'] = cross_1920['M'] / cross_1920['total']
+        cross_1920['w_f'] = cross_1920['F'] / cross_1920['total']
+
+
+        # Analogicznie dla okresu od 2000 roku
+        df_unisex_2000 = self.df[
+            (self.df['year'] >= 2000) &
+            (self.df['name'].isin(unisex_names))
+        ]
+
+        cross_2000 = pd.crosstab(
+            index=df_unisex_2000['name'],
+            columns=df_unisex_2000['gender'],
+            values=df_unisex_2000['count'],
+            aggfunc='sum'
+        ).fillna(0)
+
+        cross_2000['total'] = cross_2000['M'] + cross_2000['F']
+        cross_2000['w_m'] = cross_2000['M'] / cross_2000['total']
+        cross_2000['w_f'] = cross_2000['F'] / cross_2000['total']
+
+        # Znajdź imiona które występują w obu okresach
+        common_names = cross_1920.index.intersection(cross_2000.index)
+
+        # oblicz zmiany konotacji
+        changes = pd.DataFrame(index=common_names)
+
+        changes['w_m_1920'] = cross_1920.loc[common_names, 'w_m']
+        changes['w_f_1920'] = cross_1920.loc[common_names, 'w_f']
+        changes['w_m_2000'] = cross_2000.loc[common_names, 'w_m']
+        changes['w_f_2000'] = cross_2000.loc[common_names, 'w_f']
+        
+        # Zmiana z męskiego na żeńskie: (w_m(1920) + w_f(2000)) / 2
+        changes['male_to_female'] = (changes['w_m_1920'] + changes['w_f_2000']) / 2
+        
+        # Zmiana z żeńskiego na męskie: (w_f(1920) + w_m(2000)) / 2
+        changes['female_to_male'] = (changes['w_f_1920'] + changes['w_m_2000']) / 2
+        
+        # Znajdź największe zmiany
+        # Imię które było męskie (w_m_1920 > 0.7) a teraz żeńskie (w_f_2000 > 0.7)
+        male_to_female_candidates = changes.sort_values('male_to_female', ascending=False)
+        
+        # Imię które było żeńskie (w_f_1920 > 0.7) a teraz męskie (w_m_2000 > 0.7)
+        female_to_male_candidates = changes.sort_values('female_to_male', ascending=False)
+        print("Rozwiązanie zadania 10:")
+    
+        for i, (name, row) in enumerate(male_to_female_candidates.head(1).iterrows()):
+            print(f"\n{i+1}. Imię: {name}")
+            print(f"   Do 1920: {row['w_m_1920']*100:.1f}% męskie, {row['w_f_1920']*100:.1f}% żeńskie")
+            print(f"   Od 2000: {row['w_m_2000']*100:.1f}% męskie, {row['w_f_2000']*100:.1f}% żeńskie")
+            print(f"   Wskaźnik zmiany: {row['male_to_female']:.3f}")
+            
+            # Dodaj liczby absolutne
+            births_1920_m = cross_1920.loc[name, 'M']
+            births_1920_f = cross_1920.loc[name, 'F']
+            births_2000_m = cross_2000.loc[name, 'M']
+            births_2000_f = cross_2000.loc[name, 'F']
+            print(f" Liczby: 1920: M={births_1920_m:.0f}, F={births_1920_f:.0f} | 2000+: M={births_2000_m:.0f}, F={births_2000_f:.0f}")
+
+        for i, (name, row) in enumerate(female_to_male_candidates.head(1).iterrows()):
+            print(f"\n{i+1}. Imię: {name}")
+            print(f"   Do 1920: {row['w_m_1920']*100:.1f}% męskie, {row['w_f_1920']*100:.1f}% żeńskie")
+            print(f"   Od 2000: {row['w_m_2000']*100:.1f}% męskie, {row['w_f_2000']*100:.1f}% żeńskie")
+            print(f"   Wskaźnik zmiany: {row['male_to_female']:.3f}")
+            
+            # Dodaj liczby absolutne
+            births_1920_m = cross_1920.loc[name, 'M']
+            births_1920_f = cross_1920.loc[name, 'F']
+            births_2000_m = cross_2000.loc[name, 'M']
+            births_2000_f = cross_2000.loc[name, 'F']
+            print(f" Liczby: 1920: M={births_1920_m:.0f}, F={births_1920_f:.0f} | 2000+: M={births_2000_m:.0f}, F={births_2000_f:.0f}")     
+        
+        # Weź top 2 imiona z największymi zmianami
+        top_male_to_female = male_to_female_candidates.head(1).index[0]
+        top_female_to_male = female_to_male_candidates.head(1).index[0]
+        
+        # Przygotuj dane dla wykresu trendu konotacji
+        selected_names = [top_male_to_female, top_female_to_male]
+        
+        fig, axes = plt.subplots(2, 1, figsize=(14, 10))
+        
+        for idx, name in enumerate(selected_names):
+            # Pobierz dane dla danego imienia we wszystkich latach
+            name_data = self.df[self.df['name'] == name]
+            
+            # Oblicz wskaźnik konotacji dla każdego roku
+            yearly_connotation = name_data.groupby(['year', 'gender'])['count'].sum().unstack(fill_value=0)
+            
+            # Upewnij się, że mamy obie kolumny
+            if 'M' not in yearly_connotation.columns:
+                yearly_connotation['M'] = 0
+            if 'F' not in yearly_connotation.columns:
+                yearly_connotation['F'] = 0
+                
+            yearly_connotation['total'] = yearly_connotation['M'] + yearly_connotation['F']
+            yearly_connotation['w_m'] = yearly_connotation['M'] / yearly_connotation['total']
+            yearly_connotation['w_f'] = yearly_connotation['F'] / yearly_connotation['total']
+            
+            # Wykres trendu
+            ax = axes[idx]
+            ax.plot(yearly_connotation.index, yearly_connotation['w_m'] * 100, 
+                   label='Męskie (%)', color='blue', linewidth=2)
+            ax.plot(yearly_connotation.index, yearly_connotation['w_f'] * 100, 
+                   label='Żeńskie (%)', color='pink', linewidth=2)
+            
+            # Zaznacz przedziały analizy
+            ax.axvspan(1880, 1920, alpha=0.2, color='yellow', label='Okres do 1920')
+            ax.axvspan(2000, 2024, alpha=0.2, color='lightgreen', label='Okres od 2000')
+            
+            # Dodaj adnotacje dla kluczowych punktów
+            w_m_1920 = changes.loc[name, 'w_m_1920']
+            w_f_1920 = changes.loc[name, 'w_f_1920']
+            w_m_2000 = changes.loc[name, 'w_m_2000']
+            w_f_2000 = changes.loc[name, 'w_f_2000']
+            
+            ax.annotate(f'1920: {w_m_1920*100:.1f}% M, {w_f_1920*100:.1f}% F',
+                       xy=(1920, w_m_1920*100 if w_m_1920 > w_f_1920 else w_f_1920*100),
+                       xytext=(1920, 85), fontsize=9,
+                       bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5),
+                       arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
+            
+            ax.annotate(f'2000+: {w_m_2000*100:.1f}% M, {w_f_2000*100:.1f}% F',
+                       xy=(2000, w_m_2000*100 if w_m_2000 > w_f_2000 else w_f_2000*100),
+                       xytext=(1960, 15), fontsize=9,
+                       bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.5),
+                       arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
+            
+            ax.set_xlabel('Rok', fontsize=11)
+            ax.set_ylabel('Procent (%)', fontsize=11)
+            ax.set_title(f'Zmiana konotacji imienia "{name}" na przestrzeni lat', 
+                        fontsize=12, fontweight='bold')
+            ax.legend(loc='best')
+            ax.grid(True, alpha=0.3)
+            ax.set_ylim(-5, 105)
+            
+        plt.tight_layout()
+        plt.show()
+                
+    def wczytaj_dane_pl(self):
+        conn = sqlite3.connect('dataset/names_pl_2000-24.sqlite')
+        # Zapytanie SQL łączące dane dla obu płci
+        query = """
+        SELECT 
+            COALESCE(males.Imię, females.Imię) as name,
+            COALESCE(males.Rok, females.Rok) as year,
+            COALESCE(males.Liczba, 0) as count_male,
+            COALESCE(females.Liczba, 0) as count_female
+        FROM 
+            (SELECT Imię, Rok, Liczba FROM males) males
+        FULL OUTER JOIN 
+            (SELECT Imię, Rok, Liczba FROM females) females
+        ON males.Imię = females.Imię AND males.Rok = females.Rok
+        ORDER BY year, name
+        """
+        self.df_pl = pd.read_sql_query(query, conn)
+        conn.close()
+
+    def ranking_imion_pl(self):
+        '''12. Stwórz ranking 200 najpopularniejszych imion nadawanych w Polsce w latach 2000-2024'''
+        self.df_pl['total'] = self.df_pl['count_male'] + self.df_pl['count_female']
+        top_names = self.df_pl.nlargest(200, 'total')
+        
 
 if __name__ == "__main__":
         projekt1 = Projekt1()
@@ -247,5 +435,7 @@ if __name__ == "__main__":
         #projekt1.liczba_urodzin_wykres()
         projekt1.najpopularniejsze_imiona()
         #projekt1.najpopularniejsze_imiona_wykres()
-        projekt1.zmiana_roznorodnosci_imion_wykres()
+        #projekt1.zmiana_roznorodnosci_imion_wykres()
         #projekt1.hipoteza()
+        #projekt1.konotacje_imion()
+        projekt1.wczytaj_dane_pl()
