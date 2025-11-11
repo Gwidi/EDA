@@ -462,6 +462,48 @@ class Projekt1:
         plt.show()
         print(f'Odpowiedź do zadania 11: Na histogramie widać że różnorodność imion dla obu płci wzrosła przy czym różnorodność imion męskich jest podobna do różnorodności imion żeńskich w 2013 roku(w 2000 roku rożnorodność imion żeńskich była wyższa w stosunku do różnorodności imion męskich. Nie potrafie zidentyfikować innych czynników wpływających na tę sytuację na podstawie dostępnych danych.')
         
+        # Przeanalizuj czy w Polsce również preferowane są imiona kończące się na określone litery (jak w USA).
+        self.df_pl['last_letter'] = self.df['name'].str[-1]
+        # agregacja: suma urodzeń (count) dla każdej kombinacji year, gender, last_letter
+        df_agg = (
+            self.df_pl
+            .groupby(['year', 'gender', 'last_letter'])['count']
+            .sum()
+            .reset_index(name='births')
+        )
+        # wyodrębnij dane dla lat 2000 - 2024 dla mężczyzn
+        male = df_agg[df_agg['gender'] == 'M'] 
+
+        # Stwórz tabelę przestawną
+        pivot = male.pivot(index='last_letter', columns='year', values='births')
+
+        # Znormalizuj dane względem całkowitej liczby urodzin w danym roku
+        pivot = pivot.div(pivot.sum(axis=0), axis=1) * 100
+
+        #  Wyświetl, dla której litery wystąpił największy wzrost/spadek między rokiem 1900 a 2024
+        changes = pivot[2024] - pivot[2000]
+        max_increase_letter = changes.idxmax()
+        max_decrease_letter = changes.idxmin()
+        print(f'Największy wzrost między latami 2000 a 2024 dla imion męskich wystąpił dla litery: {max_increase_letter} ({changes[max_increase_letter]:.2f}%)')
+        print(f'Największy spadek między latami 2000 a 2024 dla imion męskich wystąpił dla litery: {max_decrease_letter} ({changes[max_decrease_letter]:.2f}%)')
+
+        # Dla 3 liter dla których zaobserwowano największą zmianę wyświetl przebieg trendu popularności w całym okresie czasu (dla każdego roku)
+        top_3_letters = changes.abs().sort_values(ascending=False).head(3).index.tolist()
+        
+        
+
+        fig, ax = plt.subplots(figsize=(14, 7))
+        for letter in top_3_letters:
+            letter_data = pivot[pivot.index == letter]
+            ax.plot(letter_data.columns, letter_data.values.flatten(), label=letter)
+
+        plt.title('Trendy popularności ostatnich liter imion męskich')
+        plt.xlabel('Ostatnia litera imienia')
+        plt.ylabel('Procent liczby urodzin w danym roku [%]')
+        plt.legend(title='Rok')
+        plt.grid(axis='y', alpha=0.3)
+        plt.tight_layout()
+        plt.show()
         
         
 
