@@ -430,11 +430,39 @@ class Projekt1:
         conn.close()
 
     def ranking_imion_pl(self):
-        '''12. Stwórz ranking 200 najpopularniejszych imion nadawanych w Polsce dla każdej płci w latach 2000-2024'''
+        '''11. Stwórz ranking 200 najpopularniejszych imion nadawanych w Polsce dla każdej płci w latach 2000-2024'''
         self.df_pl = self.frekwencja_imion(self.df_pl)
-        #pandasgui.show(self.df_pl)
         top_male, top_female = self.najpopularniejsze_imiona(self.df_pl, number=200)
-        print(top_female)
+        top_male = set(top_male['name'])
+        top_female = set(top_female['name'])
+
+        # Filtruj oryginalny DataFrame, aby sprawdzić, czy imię należy do top 1000
+        years = [2000, 2013, 2024]     
+        df_m = self.df_pl[self.df_pl['gender'] == 'M']
+        df_f = self.df_pl[self.df_pl['gender'] == 'F']
+        cov_m = df_m[df_m['name'].isin(top_male)].groupby('year').count() # liczba imion z top 200 które się pokrywają z imionami w danym roku
+        cov_f = df_f[df_f['name'].isin(top_female)].groupby('year').count()
+        cov_m = cov_m[cov_m.index.isin(years)]
+        cov_f = cov_f[cov_f.index.isin(years)]
+
+        
+
+        fig, ax = plt.subplots(figsize=(12, 6))
+        width = 0.4  # szerokość słupków
+        x = np.arange(len(years))
+        ax.set_xticks(x)
+        ax.set_xticklabels(years)
+
+        ax.bar(x - width/2, cov_m['name'], label='Męskie', color='blue', width=width)
+        ax.bar(x + width/2, cov_f['name'], label='Żeńskie', color='pink', width=width)
+        ax.set_title('Liczba imiona męskich i żeńskich które pokrywają się z top 200 imionami w Polsce w latach 2000-2024')
+        ax.set_xlabel('Rok')
+        ax.set_ylabel('Liczba nadawanych imion z top 200')
+        ax.legend()
+        plt.show()
+        print(f'Odpowiedź do zadania 11: Na histogramie widać że różnorodność imion dla obu płci wzrosła przy czym różnorodność imion męskich jest podobna do różnorodności imion żeńskich w 2013 roku(w 2000 roku rożnorodność imion żeńskich była wyższa w stosunku do różnorodności imion męskich. Nie potrafie zidentyfikować innych czynników wpływających na tę sytuację na podstawie dostępnych danych.')
+        
+        
         
 
 if __name__ == "__main__":
