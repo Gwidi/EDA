@@ -15,7 +15,7 @@ class Projekt1:
     def wczytaj_dane_SSA(self):
         '''1.Wczytaj dane ze wszystkich plików do pojedynczej tablicy'''
         conn = duckdb.connect()
-        self.df = conn.execute("SELECT * from read_csv('dataset/names/*.txt', header=false, " \
+        self.df = conn.execute("SELECT * from read_csv('./data/names/*.txt', header=false, " \
         "columns={'name': 'VARCHAR', 'gender': 'VARCHAR', 'count': 'INTEGER'}, filename=True)").fetch_df() # df jest teraz DataFrame Pandas
         # Ustawiamy filename=True, aby uzyskać rok w którym zostały zebrane dane
 
@@ -403,7 +403,7 @@ class Projekt1:
         plt.show()
                 
     def wczytaj_dane_pl(self):
-        conn = sqlite3.connect('dataset/names_pl_2000-24.sqlite')
+        conn = sqlite3.connect('./data/names_pl_2000-24.sqlite')
         # Zapytanie SQL łączące dane dla obu płci z dodaniem kolumny gender
         query = """
         SELECT 
@@ -460,7 +460,7 @@ class Projekt1:
         ax.set_ylabel('Liczba nadawanych imion z top 200')
         ax.legend()
         plt.show()
-        print(f'Odpowiedź do zadania 11: Na histogramie widać że różnorodność imion dla obu płci wzrosła przy czym różnorodność imion męskich jest podobna do różnorodności imion żeńskich w 2013 roku(w 2000 roku rożnorodność imion żeńskich była wyższa w stosunku do różnorodności imion męskich. Nie potrafie zidentyfikować innych czynników wpływających na tę sytuację na podstawie dostępnych danych.')
+        print(f'Odpowiedź do zadania 11: Na histogramie widać że różnorodność imion dla obu płci wzrosła przy czym różnorodność imion męskich jest podobna do różnorodności imion żeńskich w 2013 roku(w 2000 roku rożnorodność imion żeńskich była niższa w stosunku do różnorodności imion męskich. Nie potrafię zidentyfikować innych czynników wpływających na tę sytuację na podstawie dostępnych danych.')
         
         # Przeanalizuj czy w Polsce również preferowane są imiona kończące się na określone litery (jak w USA).
         self.df_pl['last_letter'] = self.df['name'].str[-1]
@@ -516,13 +516,13 @@ if __name__ == "__main__":
         print(f"Rozwiązanie zadania 2. Liczba unikalnych imion nadanych w USA w latach 1880-2024: {unique_names_count}")
         unique_male_names_count, unique_female_names_count = projekt1.liczba_unikalnych_imion_gender()
         print(f"Rozwiązanie zadania 3. Liczba unikalnych imion męskich: {unique_male_names_count}, żeńskich: {unique_female_names_count}")
-        #projekt1.df = projekt1.frekwencja_imion(projekt1.df)
-        #projekt1.liczba_urodzin_wykres()
-        #projekt1.male_1000_names_descending, projekt1.female_1000_names_descending = projekt1.najpopularniejsze_imiona(projekt1.df, number=1000)
-        #projekt1.najpopularniejsze_imiona_wykres()
-        #projekt1.zmiana_roznorodnosci_imion_wykres()
-        #projekt1.hipoteza()
-        #projekt1.konotacje_imion()
+        projekt1.df = projekt1.frekwencja_imion(projekt1.df)
+        projekt1.liczba_urodzin_wykres()
+        projekt1.male_1000_names_descending, projekt1.female_1000_names_descending = projekt1.najpopularniejsze_imiona(projekt1.df, number=1000)
+        projekt1.najpopularniejsze_imiona_wykres()
+        projekt1.zmiana_roznorodnosci_imion_wykres()
+        projekt1.hipoteza()
+        projekt1.konotacje_imion()
 
         # Wywołanie poszczególnych metod w celu wykonania zadań związanych z danymi z Polski
         projekt1.wczytaj_dane_pl()
