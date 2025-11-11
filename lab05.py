@@ -91,13 +91,14 @@ class Projekt1:
         plt.tight_layout()
         plt.show()
 
-    def najpopularniejsze_imiona(self):
+    def najpopularniejsze_imiona(self, df, number=1000):
         '''6. Wyznacz 1000 najpopularniejszych imion osobno dla każdej płci w całym zakresie czasowym. 
         Jako najpopularniejsze należy uznać imiona, których średnia popularność liczona w całym horyzoncie czasu jest największa'''
 
         # liczymy średnią popularność imion dla każdej płci i sortujemy je malejąco
-        self.male_1000_names_descending = self.df.groupby('name').agg({'frequency_male': 'mean'}).sort_values(by='frequency_male', ascending=False).reset_index().head(1000)
-        self.female_1000_names_descending = self.df.groupby('name').agg({'frequency_female': 'mean'}).sort_values(by='frequency_female', ascending=False).reset_index().head(1000)
+        top_n_male_names_descending = df.groupby('name').agg({'frequency_male': 'mean'}).sort_values(by='frequency_male', ascending=False).reset_index().head(number)
+        top_n_female_names_descending = df.groupby('name').agg({'frequency_female': 'mean'}).sort_values(by='frequency_female', ascending=False).reset_index().head(number)
+        return top_n_male_names_descending, top_n_female_names_descending
 
     def najpopularniejsze_imiona_wykres(self):
         '''7.Wyświetl na jednym wykresie zmiany dla drugiego najpopularniejszego imienia męskiego w okresie od 2000r
@@ -430,29 +431,29 @@ class Projekt1:
 
     def ranking_imion_pl(self):
         '''12. Stwórz ranking 200 najpopularniejszych imion nadawanych w Polsce dla każdej płci w latach 2000-2024'''
-        # self.df_pl['total_births'] = self.df_pl.groupby('year')['count_male'].agg('sum') + self.df_pl.groupby('year')['count_female'].agg('sum')
-        # self.df_pl = self.df_pl.reset_index(drop=True)
-        # self.df_pl['frequency_male'] = self.df_pl['count_male'] / self.df_pl['total_births']
-        # self.df_pl['frequency_female'] = self.df_pl['count_female'] / self.df_pl['total_births']
-        pandasgui.show(self.df_pl)
-        # top_female = self.df_pl.groupby('name').agg({'frequency_female': 'mean'}).sort_values(by='frequency_female', ascending=False).reset_index().head(200)
-        # top_male = self.df_pl.groupby('name').agg({'frequency_male': 'mean'}).sort_values(by='frequency_male', ascending=False).reset_index().head(200)
-        # print(top_male)
+        self.df_pl = self.frekwencja_imion(self.df_pl)
+        #pandasgui.show(self.df_pl)
+        top_male, top_female = self.najpopularniejsze_imiona(self.df_pl, number=200)
+        print(top_female)
         
 
 if __name__ == "__main__":
+        # Utworzenie instancji klasy Projektu1
         projekt1 = Projekt1()
+        # Wywołanie poszczególnych metod w celu wykonania zadań związanych z danymi z USA
         projekt1.wczytaj_dane_SSA()
         unique_names_count = projekt1.liczba_unikalnych_imion()
         print(f"Rozwiązanie zadania 2. Liczba unikalnych imion nadanych w USA w latach 1880-2024: {unique_names_count}")
         unique_male_names_count, unique_female_names_count = projekt1.liczba_unikalnych_imion_gender()
         print(f"Rozwiązanie zadania 3. Liczba unikalnych imion męskich: {unique_male_names_count}, żeńskich: {unique_female_names_count}")
-        projekt1.df = projekt1.frekwencja_imion(projekt1.df)
-        projekt1.liczba_urodzin_wykres()
-        projekt1.najpopularniejsze_imiona()
+        #projekt1.df = projekt1.frekwencja_imion(projekt1.df)
+        #projekt1.liczba_urodzin_wykres()
+        #projekt1.male_1000_names_descending, projekt1.female_1000_names_descending = projekt1.najpopularniejsze_imiona(projekt1.df, number=1000)
         #projekt1.najpopularniejsze_imiona_wykres()
         #projekt1.zmiana_roznorodnosci_imion_wykres()
         #projekt1.hipoteza()
         #projekt1.konotacje_imion()
+
+        # Wywołanie poszczególnych metod w celu wykonania zadań związanych z danymi z Polski
         projekt1.wczytaj_dane_pl()
         projekt1.ranking_imion_pl()
