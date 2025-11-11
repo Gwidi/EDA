@@ -40,20 +40,22 @@ class Projekt1:
         unique_female_names_count = self.df[self.df['gender'] == 'F']['name'].nunique()
         return unique_male_names_count, unique_female_names_count
 
-    def frekwencja_imion(self):
+    def frekwencja_imion(self, dataframe):
         '''4. Określ popularność każdego z imion w danym każdym roku'''
         # Grupuj dane według roku
-        total_births = self.df.groupby(['year', 'gender'])['count'].sum().reset_index()
+        total_births = dataframe.groupby(['year', 'gender'])['count'].sum().reset_index()
         total_births.columns = ['year', 'gender', 'total_births']
 
         # Dołącz całkowitą liczbę urodzeń do oryginalnego DataFrame
-        self.df = self.df.merge(total_births, on=['year', 'gender'])
+        dataframe = dataframe.merge(total_births, on=['year', 'gender'])
         # oblicz frekwencję
-        self.df['frequency'] = self.df['count'] / self.df['total_births']
+        dataframe['frequency'] = dataframe['count'] / dataframe['total_births']
 
         # Podziel na czestotliwość występowania imion dla obu płci
-        self.df['frequency_male'] = np.where(self.df['gender'] == 'M', self.df['frequency'], 0.0)
-        self.df['frequency_female'] = np.where(self.df['gender'] == 'F', self.df['frequency'], 0.0)
+        dataframe['frequency_male'] = np.where(dataframe['gender'] == 'M', dataframe['frequency'], 0.0)
+        dataframe['frequency_female'] = np.where(dataframe['gender'] == 'F', dataframe['frequency'], 0.0)
+
+        return dataframe
         
     def liczba_urodzin_wykres(self):
         '''5. Określ i wyświetl wykres złożony z dwóch podwykresów, gdzie osią x jest skala czasu, a oś y reprezentuje:
@@ -401,27 +403,41 @@ class Projekt1:
                 
     def wczytaj_dane_pl(self):
         conn = sqlite3.connect('dataset/names_pl_2000-24.sqlite')
-        # Zapytanie SQL łączące dane dla obu płci
+        # Zapytanie SQL łączące dane dla obu płci z dodaniem kolumny gender
         query = """
         SELECT 
-            COALESCE(males.Imię, females.Imię) as name,
-            COALESCE(males.Rok, females.Rok) as year,
-            COALESCE(males.Liczba, 0) as count_male,
-            COALESCE(females.Liczba, 0) as count_female
+            Imię as name,
+            Rok as year,
+            'M' as gender,
+            Liczba as count
         FROM 
-            (SELECT Imię, Rok, Liczba FROM males) males
-        FULL OUTER JOIN 
-            (SELECT Imię, Rok, Liczba FROM females) females
-        ON males.Imię = females.Imię AND males.Rok = females.Rok
-        ORDER BY year, name
+            males
+
+        UNION ALL
+
+        SELECT 
+            Imię as name,
+            Rok as year,
+            'F' as gender,
+            Liczba as count
+        FROM
+            females
+
+        ORDER BY year, name, gender
         """
         self.df_pl = pd.read_sql_query(query, conn)
         conn.close()
 
     def ranking_imion_pl(self):
-        '''12. Stwórz ranking 200 najpopularniejszych imion nadawanych w Polsce w latach 2000-2024'''
-        self.df_pl['total'] = self.df_pl['count_male'] + self.df_pl['count_female']
-        top_names = self.df_pl.nlargest(200, 'total')
+        '''12. Stwórz ranking 200 najpopularniejszych imion nadawanych w Polsce dla każdej płci w latach 2000-2024'''
+        # self.df_pl['total_births'] = self.df_pl.groupby('year')['count_male'].agg('sum') + self.df_pl.groupby('year')['count_female'].agg('sum')
+        # self.df_pl = self.df_pl.reset_index(drop=True)
+        # self.df_pl['frequency_male'] = self.df_pl['count_male'] / self.df_pl['total_births']
+        # self.df_pl['frequency_female'] = self.df_pl['count_female'] / self.df_pl['total_births']
+        pandasgui.show(self.df_pl)
+        # top_female = self.df_pl.groupby('name').agg({'frequency_female': 'mean'}).sort_values(by='frequency_female', ascending=False).reset_index().head(200)
+        # top_male = self.df_pl.groupby('name').agg({'frequency_male': 'mean'}).sort_values(by='frequency_male', ascending=False).reset_index().head(200)
+        # print(top_male)
         
 
 if __name__ == "__main__":
@@ -431,11 +447,12 @@ if __name__ == "__main__":
         print(f"Rozwiązanie zadania 2. Liczba unikalnych imion nadanych w USA w latach 1880-2024: {unique_names_count}")
         unique_male_names_count, unique_female_names_count = projekt1.liczba_unikalnych_imion_gender()
         print(f"Rozwiązanie zadania 3. Liczba unikalnych imion męskich: {unique_male_names_count}, żeńskich: {unique_female_names_count}")
-        projekt1.frekwencja_imion()
-        #projekt1.liczba_urodzin_wykres()
+        projekt1.df = projekt1.frekwencja_imion(projekt1.df)
+        projekt1.liczba_urodzin_wykres()
         projekt1.najpopularniejsze_imiona()
         #projekt1.najpopularniejsze_imiona_wykres()
         #projekt1.zmiana_roznorodnosci_imion_wykres()
         #projekt1.hipoteza()
         #projekt1.konotacje_imion()
         projekt1.wczytaj_dane_pl()
+        projekt1.ranking_imion_pl()
