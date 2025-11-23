@@ -1,5 +1,7 @@
 pandas 
 numpy
 pandasgui
-sqlite3
+#sqlite3
 duckdb
+sqlearn
+fuzzywuzzy
